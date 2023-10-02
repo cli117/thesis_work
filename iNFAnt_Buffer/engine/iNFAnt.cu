@@ -274,8 +274,8 @@ int main(int argc, char *argv[])
     char* pat_cuda;
     cudaMallocManaged(&pat_cuda, sizeof(char) * strlen(pat));
     strcpy(pat_cuda, pat);
-    build_mask_table<<<256, strlen(pat)>>>(pat_cuda, strlen(pat), mask_table);
-
+    build_mask_table<<<256, 3>>>(pat_cuda, strlen(pat), mask_table);
+    cudaDeviceSynchronize();
     for (int i = 0; i < 256; i++)
     {
         for (int j = 0; j < strlen(pat); j++)
