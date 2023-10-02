@@ -27,7 +27,7 @@ __device__ void bit_vector_and_AP(int* a, int* b, int* output, int size)
     }
 }
 
-__global__ void ASyncAP(char** packets_cuda, int* packets_size_config, cuda_pair** nfa_cuda, int* state_transition_size_cfg, int num_of_states, int* persistent_sv, int* acc_states, int acc_length)
+__global__ void ASyncAP(char** packets_cuda, int* packets_size_config, cuda_pair** nfa_cuda, int* state_transition_size_cfg, int num_of_states, int* persistent_sv, int* acc_states, int acc_length, char* regex_filename)
 {
     char* packet = packets_cuda[blockIdx.x];
     int n = packets_size_config[blockIdx.x];
@@ -36,17 +36,18 @@ __global__ void ASyncAP(char** packets_cuda, int* packets_size_config, cuda_pair
     int c_vector[1000];
     int f_vector[1000];
 
-    for (int i = 0; i < num_of_states; i++) {
-        c_vector[i] = 0;
-        f_vector[i] = 0;
-    }
-
     if (threadIdx.x == 0) 
     {
         found = false;        
     }
     
     __syncthreads();
+
+    for (int i = 0; i < num_of_states; i++) 
+    {
+        c_vector[i] = 0;
+        f_vector[i] = 0;
+    }
 
     int curr_start_pos = threadIdx.x;
     while (curr_start_pos < n)
@@ -79,7 +80,7 @@ __global__ void ASyncAP(char** packets_cuda, int* packets_size_config, cuda_pair
                         if (c_vector[acc_states[i] - 1] == 1)
                         {
                             found = 1;
-                            printf("found!\n");
+                            printf("found at %s!\n", regex_filename);
                             return;
                         }
         }
@@ -88,6 +89,11 @@ __global__ void ASyncAP(char** packets_cuda, int* packets_size_config, cuda_pair
 
             if (!proceed)
             {
+                for (int i = 0; i < num_of_states; i++) 
+                {
+                    c_vector[i] = 0;
+                    f_vector[i] = 0;
+                }
                 break;
             }
 

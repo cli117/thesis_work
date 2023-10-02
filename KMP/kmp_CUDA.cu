@@ -5,7 +5,7 @@
 
 using namespace std;
 
-void preKMP(char* pattern, int f[])
+void preKMP(const char* pattern, int f[])
 {
     int m = strlen(pattern), k;
     f[0] = -1;

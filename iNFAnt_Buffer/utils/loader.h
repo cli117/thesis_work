@@ -22,13 +22,18 @@ std::vector<cuda_pair>* get_nfa(std::string filename, std::unordered_set<int>* a
     std::vector<cuda_pair>* ret = (std::vector<cuda_pair>*) calloc(256, sizeof(std::vector<cuda_pair>));
     std::ifstream infile(filename);
     std::string line;
+    bool first_skipped = false;
     while (std::getline(infile, line))
     {
+        if (!first_skipped)
+        {
+            first_skipped = true;
+            continue;
+        }
         size_t dash_idx = line.find_first_of("-");
         size_t cln_idx = line.find_first_of(":");
         bool is_acc = ends_with(line, " acc");
         size_t end_idx = is_acc ? line.length() - 5 : line.length() - 1;
-
         int src = std::stoi(line.substr(0, dash_idx));
         int dest = std::stoi(line.substr(dash_idx+1, cln_idx - dash_idx - 1));
         if (is_acc)
@@ -55,13 +60,19 @@ std::vector<cuda_pair>* get_nfa(std::string filename, std::unordered_set<int>* a
     return ret;
 }
 
-int get_num_of_states() 
+int get_num_of_states(std::string filename) 
 {
     int ret = 0;
-    std::ifstream infile("../test_suite/patterns.nfa");
+    std::ifstream infile(filename);
     std::string line;
+    bool first_skipped = false;
     while (std::getline(infile, line))
     {
+        if (!first_skipped)
+        {
+            first_skipped = true;
+            continue;
+        }
         size_t dash_idx = line.find_first_of("-");
         size_t cln_idx = line.find_first_of(":");
         int dest = std::stoi(line.substr(dash_idx+1, cln_idx - dash_idx - 1));
@@ -71,14 +82,20 @@ int get_num_of_states()
     return ret;
 }
 
-int* get_persistent_sv()
+int* get_persistent_sv(std::string filename)
 {
-    int size = get_num_of_states();
+    int size = get_num_of_states(filename);
     int* ret = (int*) calloc(size, sizeof(int));
-    std::ifstream infile("../test_suite/patterns.nfa");
+    std::ifstream infile(filename);
     std::string line;
+    bool first_skipped = false;
     while (std::getline(infile, line))
     {
+        if (!first_skipped)
+        {
+            first_skipped = true;
+            continue;
+        }
         size_t dash_idx = line.find_first_of("-");
         size_t cln_idx = line.find_first_of(":");
 
@@ -90,6 +107,19 @@ int* get_persistent_sv()
     }
 
     return ret;
+}
+
+std::string get_longest_literal(std::string filename, int& size)
+{
+    std::ifstream infile(filename);
+    std::string line;
+    if (std::getline(infile, line))
+    {
+        size = line.size();
+        return line;
+    }
+
+    return "";
 }
 
 std::vector<std::string> get_packets(std::string filename)

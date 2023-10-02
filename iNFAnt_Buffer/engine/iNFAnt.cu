@@ -6,7 +6,7 @@
 namespace fs = std::filesystem;
 
 
-const int NUM_OF_THREADS = 5;
+const int NUM_OF_THREADS = 1024;
 
 __device__ void print_vec(int* vec, int size)
 {
@@ -37,13 +37,12 @@ __device__ void bit_vector_and(int* a, int* b, int* output, int size)
     }
 }
 
-__global__ void iNFAnt_match(char** packets_cuda, int* packets_size_config, cuda_pair** nfa_cuda, int* state_transition_size_cfg, int num_of_states, int* persistent_sv, bool* filtered_valid, int* acc_states, int acc_length)
+__global__ void iNFAnt_match(char** packets_cuda, int* packets_size_config, cuda_pair** nfa_cuda, int* state_transition_size_cfg, int num_of_states, int* persistent_sv, bool* filtered_valid, int* acc_states, int acc_length, const char* regex_filename)
 {
-    if (!filtered_valid[blockIdx.x])
-    {
-        return;
-    }
-
+    // if (!filtered_valid[blockIdx.x])
+    // {
+    //     return;
+    // }
     __shared__ int curr_pos;
     __shared__ int found;
     extern __shared__ int vector[];
@@ -96,7 +95,7 @@ __global__ void iNFAnt_match(char** packets_cuda, int* packets_size_config, cuda
             if (c_vector[acc_states[i] - 1] == 1)
             {
                 found = 1;
-                printf("found!\n");
+                printf("found at %s!\n", regex_filename);
                 break;
             }
         }
@@ -155,12 +154,12 @@ int main(int argc, char *argv[])
     for (int i = 0; i < 1; i++)
     {
         // std::string regex_file = entry.path();
-        std::string regex_file = working_dir + "test_suite/nfa_output/nfa488.nfa";
+        std::string regex_file = working_dir + "test_suite/nfa_output/nfa1683.nfa";
+        std::cout << "Searching " << regex_file << std::endl;
         std::string corpus_file = working_dir + string_filename;
 
         std::unordered_set<int> acc_set;
         std::vector<cuda_pair>* nfa = get_nfa(regex_file, &acc_set);
-        std::cout << "Searching " << regex_file << std::endl;
 
     
         for (int i = 0; i < 256; i++)
@@ -176,26 +175,26 @@ int main(int argc, char *argv[])
         
     // KMP Testing
         int cSize = 4;
-        char test_pat[] = "qcp";
-        int n = strlen(test_pat);
+        int n = 0;
+        string pat = get_longest_literal(regex_file, n);
         int *f;
         f = new int[n];
-        preKMP(test_pat, f);
+        preKMP(pat.c_str(), f);
         int *d_f;
         char *d_pat;
         cudaMalloc((void **)&d_f, n*cSize);
         cudaMalloc((void **)&d_pat, n*cSize);
-        cudaMemcpy(d_pat, test_pat, n*cSize, cudaMemcpyHostToDevice);
+        cudaMemcpy(d_pat, pat.c_str(), n*cSize, cudaMemcpyHostToDevice);
         cudaMemcpy(d_f, f, n*cSize, cudaMemcpyHostToDevice);
 
         bool* filtered_valid;
         cudaMallocManaged(&filtered_valid, num_of_packets * sizeof(bool));
 
-        KMP<<<num_of_packets, NUM_OF_THREADS>>>(d_pat, packets_cuda, packets_size_config, d_f, strlen(test_pat), num_of_packets, filtered_valid);
+        KMP<<<num_of_packets, NUM_OF_THREADS>>>(d_pat, packets_cuda, packets_size_config, d_f, pat.size(), num_of_packets, filtered_valid);
         cudaDeviceSynchronize();
 
-        int num_of_states = get_num_of_states();
-        int* persistent_sv = get_persistent_sv();
+        int num_of_states = get_num_of_states(regex_file);
+        int* persistent_sv = get_persistent_sv(regex_file);
 
         int* persistent_sv_cuda;
         cudaMallocManaged(&persistent_sv_cuda, num_of_states*sizeof(int));
@@ -213,11 +212,13 @@ int main(int argc, char *argv[])
             acc_states[cnt] = state;
             cnt += 1;
         }
-
-        iNFAnt_match<<<num_of_packets, NUM_OF_THREADS, 2*num_of_states*sizeof(int)>>>(packets_cuda, packets_size_config, nfa_cuda, state_transition_size_cfg, num_of_states, persistent_sv_cuda, filtered_valid, acc_states, acc_set.size());
+        char* regex_file_cuda;
+        cudaMallocManaged(&regex_file_cuda, sizeof(char) * regex_file.size());
+        strcpy(regex_file_cuda, regex_file.c_str());
+        // iNFAnt_match<<<num_of_packets, NUM_OF_THREADS, 2*num_of_states*sizeof(int)>>>(packets_cuda, packets_size_config, nfa_cuda, state_transition_size_cfg, num_of_states, persistent_sv_cuda, filtered_valid, acc_states, acc_set.size(), regex_file_cuda);
     
 // ASyncAPTesting
-        // ASyncAP<<<num_of_packets, NUM_OF_THREADS, 2*num_of_states*sizeof(int)>>>(packets_cuda, packets_size_config, nfa_cuda, state_transition_size_cfg, num_of_states, persistent_sv_cuda, acc_states, acc_set.size());
+        ASyncAP<<<num_of_packets, NUM_OF_THREADS, 2*num_of_states*sizeof(int)>>>(packets_cuda, packets_size_config, nfa_cuda, state_transition_size_cfg, num_of_states, persistent_sv_cuda, acc_states, acc_set.size(), regex_file_cuda);
     
     
         for (int i = 0; i < 256; i++)
