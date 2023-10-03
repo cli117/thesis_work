@@ -170,12 +170,12 @@ int main(int argc, char *argv[])
     // for (int i = 0; i < 1; i++)
     {
         num_of_iterations += 1;
-        if (iterations > 0 and num_of_iterations > iterations)
+        if (iterations > 0 && num_of_iterations > iterations)
         {
             break;
         }
 
-        std::string regex_file = entry.path();
+        std::string regex_file = entry.path().u8string();
         // std::string regex_file = working_dir + "test_suite/nfa_output/nfa65.nfa";
         // std::cout << num_of_iterations << " th iteration: " << regex_file << std::endl;
         std::string corpus_file = working_dir + string_filename;
