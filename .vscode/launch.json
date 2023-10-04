@@ -9,7 +9,7 @@
             "type": "cuda-gdb",
             "request": "launch",
             "program": "${workspaceFolder}/iNFAnt_Buffer/engine/iNFAnt",
-            "args": "${workspaceFolder}/iNFAnt_Buffer/ test_suite/midstr_7k.txt"
+            "args": "${workspaceFolder}/iNFAnt_Buffer/ test_suite/midstr_7k.txt 10 ASyncAP 32"
         },
         {
             "name": "CUDA C++: Attach",

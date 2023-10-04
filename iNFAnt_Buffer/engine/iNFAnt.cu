@@ -6,9 +6,6 @@
 #include <filesystem>
 namespace fs = std::filesystem;
 
-
-const int NUM_OF_THREADS = 32;
-
 __device__ void print_vec(int* vec, int size)
 {
     if (threadIdx.x == 0)
@@ -111,6 +108,8 @@ int main(int argc, char *argv[])
 {   
     std::string string_filename = "strings";
     std::string working_dir = "";
+    std::string mode = "iNFAnt";
+    std::string num_of_threads = "1024";
     if (argc > 1) {
         working_dir = argv[1];
     }
@@ -126,6 +125,24 @@ int main(int argc, char *argv[])
         iterations = stoi(argv[3]);
     }
 
+    if (argc > 4)
+    {
+        if (!strcmp(argv[4], "0") || !strcmp(argv[4], "infant")|| !strcmp(argv[4], "iNFAnt"))
+        {
+            mode = "iNFAnt";
+        }
+        else
+        {
+            mode = "ASyncAP";
+        }
+    }
+
+    if (argc > 5)
+    {
+        num_of_threads = argv[5];
+    }
+
+    const int NUM_OF_THREADS = stoi(num_of_threads);
     cuda_pair** nfa_cuda;
     int* state_transition_size_cfg;
     cudaMallocManaged(&nfa_cuda, 256*sizeof(cuda_pair*));
@@ -146,7 +163,7 @@ int main(int argc, char *argv[])
         strcpy(packets_cuda[i], packets[i].c_str());
         packets_size_config[i] = str_len;
     }
-
+    std::cout << mode << " matching..." << std::endl;
     auto start = std::chrono::steady_clock::now();
     int num_of_iterations = 0;
     for (const auto & entry : fs::directory_iterator(working_dir + "test_suite/nfa_output"))
@@ -160,7 +177,7 @@ int main(int argc, char *argv[])
 
         std::string regex_file = entry.path();
         // std::string regex_file = working_dir + "test_suite/nfa_output/nfa65.nfa";
-        std::cout << num_of_iterations << " th iteration: " << regex_file << std::endl;
+        // std::cout << num_of_iterations << " th iteration: " << regex_file << std::endl;
         std::string corpus_file = working_dir + string_filename;
 
         std::unordered_set<int> acc_set;
@@ -223,12 +240,17 @@ int main(int argc, char *argv[])
         bool* result;
         cudaMallocManaged(&result, sizeof(bool));
         result[0] = false;
-        iNFAnt_match<<<num_of_packets, NUM_OF_THREADS, 2*num_of_states*sizeof(int)>>>(packets_cuda, packets_size_config, nfa_cuda, state_transition_size_cfg, num_of_states, persistent_sv_cuda, filtered_valid, acc_states, acc_set.size(), regex_file_cuda, result);
-    
-// ASyncAPTesting
-        // ASyncAP<<<num_of_packets, NUM_OF_THREADS>>>(packets_cuda, packets_size_config, nfa_cuda, state_transition_size_cfg, num_of_states, persistent_sv_cuda, acc_states, acc_set.size(), regex_file_cuda, result);
-    
+        if (mode == "iNFAnt")
+        {
+            
+            iNFAnt_match<<<num_of_packets, NUM_OF_THREADS, 2*num_of_states*sizeof(int)>>>(packets_cuda, packets_size_config, nfa_cuda, state_transition_size_cfg, num_of_states, persistent_sv_cuda, filtered_valid, acc_states, acc_set.size(), regex_file_cuda, result);
+        }
+        else if (mode == "ASyncAP")
+        {
+            ASyncAP<<<num_of_packets, NUM_OF_THREADS>>>(packets_cuda, packets_size_config, nfa_cuda, state_transition_size_cfg, num_of_states, persistent_sv_cuda, acc_states, acc_set.size(), regex_file_cuda, result);
+        }
         cudaDeviceSynchronize();
+
         for (int i = 0; i < 256; i++)
         {
             cudaFree(nfa_cuda[i]);
@@ -261,7 +283,7 @@ int main(int argc, char *argv[])
     cudaFree(packets_size_config);
 
     auto end = std::chrono::steady_clock::now();
-    std::cout << "GPU elapsed time in milliseconds" << "(num of threads: " << NUM_OF_THREADS << "): "
+    std::cout << "In mode " << mode << "GPU elapsed time in milliseconds" << "(num of threads: " << NUM_OF_THREADS << "): "
         << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
         << " ms" << std::endl;
 
