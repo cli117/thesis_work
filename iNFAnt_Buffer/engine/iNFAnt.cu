@@ -90,7 +90,7 @@ __global__ void iNFAnt_match(char** packets_cuda, int* packets_size_config, cuda
             if (c_vector[acc_states[i] - 1] == 1)
             {
                 result[0] = true;
-                printf("found at %s!\n", regex_filename);
+                // printf("found at %s!\n", regex_filename);
                 break;
             }
         }
@@ -166,7 +166,7 @@ int main(int argc, char *argv[])
     std::cout << mode << " matching..." << std::endl;
     auto start = std::chrono::steady_clock::now();
     int num_of_iterations = 0;
-    for (const auto & entry : fs::directory_iterator(working_dir + "test_suite/nfa_output"))
+    for (const auto & entry : fs::directory_iterator(working_dir + "test_suite/nfa_compare"))
     // for (int i = 0; i < 1; i++)
     {
         num_of_iterations += 1;

@@ -71,7 +71,7 @@ __global__ void ASyncAP(char** packets_cuda, int* packets_size_config, cuda_pair
                         if (f_vector[acc_states[i] - 1] == 1)
                         {
                             result[0] = true;
-                            printf("found at %s!\n", regex_filename);
+                            // printf("found at %s!\n", regex_filename);
                             return;
                         }
                     }
