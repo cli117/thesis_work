@@ -26,8 +26,12 @@ __device__ void bit_vector_and_AP(int* a, int* b, int* output, int size)
     }
 }
 
-__global__ void ASyncAP(char** packets_cuda, int* packets_size_config, cuda_pair** nfa_cuda, int* state_transition_size_cfg, int num_of_states, int* persistent_sv, int* acc_states, int acc_length, char* regex_filename, bool* result)
+__global__ void ASyncAP(char** packets_cuda, int* packets_size_config, cuda_pair** nfa_cuda, int* state_transition_size_cfg, int num_of_states, int* persistent_sv, int* acc_states, int acc_length, char* regex_filename, bool* result, bool* filtered_valid)
 {
+    if (!filtered_valid[blockIdx.x])
+    {
+        return;
+    }
     char* packet = packets_cuda[blockIdx.x];
     int n = packets_size_config[blockIdx.x];
     int stride = blockDim.x;
