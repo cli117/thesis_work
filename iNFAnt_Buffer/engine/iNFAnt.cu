@@ -37,10 +37,10 @@ __device__ void bit_vector_and(int* a, int* b, int* output, int size)
 
 __global__ void iNFAnt_match(char** packets_cuda, int* packets_size_config, cuda_pair** nfa_cuda, int* state_transition_size_cfg, int num_of_states, int* persistent_sv, bool* filtered_valid, int* acc_states, int acc_length, const char* regex_filename, bool* result)
 {
-    if (!filtered_valid[blockIdx.x])
-    {
-        return;
-    }
+    // if (!filtered_valid[blockIdx.x])
+    // {
+    //     return;
+    // }
     __shared__ int curr_pos;
     extern __shared__ int vector[];
     int* c_vector = &vector[0];
@@ -166,6 +166,7 @@ int main(int argc, char *argv[])
     std::cout << mode << " matching..." << std::endl;
     auto start = std::chrono::steady_clock::now();
     int num_of_iterations = 0;
+    float time_prefilter = 0.;
     for (const auto & entry : fs::directory_iterator(working_dir + "test_suite/nfa_compare"))
     // for (int i = 0; i < 1; i++)
     {
@@ -194,7 +195,9 @@ int main(int argc, char *argv[])
                 nfa_cuda[i][j] = nfa[i][j];
             }
         }
+
         
+        auto filter_start = std::chrono::steady_clock::now();
     // KMP Testing
         int cSize = 4;
         int pat_len = 0;
@@ -202,33 +205,35 @@ int main(int argc, char *argv[])
         char *d_pat;
         cudaMalloc((void **)&d_pat, pat_len*cSize);
         cudaMemcpy(d_pat, pat.c_str(), pat_len*cSize, cudaMemcpyHostToDevice);
-
-
-        int *f;
-        f = new int[pat_len];
-        preKMP(pat.c_str(), f);
-        int *d_f;
-        cudaMalloc((void **)&d_f, pat_len*cSize);
-        cudaMemcpy(d_f, f, pat_len*cSize, cudaMemcpyHostToDevice);
-
         bool* filtered_valid;
         cudaMallocManaged(&filtered_valid, num_of_packets * sizeof(bool));
 
-        KMP<<<num_of_packets, NUM_OF_THREADS>>>(d_pat, packets_cuda, packets_size_config, d_f, pat_len, num_of_packets, filtered_valid);
+
+        // int *f;
+        // f = new int[pat_len];
+        // preKMP(pat.c_str(), f);
+        // int *d_f;
+        // cudaMalloc((void **)&d_f, pat_len*cSize);
+        // cudaMemcpy(d_f, f, pat_len*cSize, cudaMemcpyHostToDevice);
+
+        // KMP<<<num_of_packets, NUM_OF_THREADS>>>(d_pat, packets_cuda, packets_size_config, d_f, pat_len, num_of_packets, filtered_valid);
 
 
 
-        unsigned long long* mask_table;
-        cudaMallocManaged(&mask_table, 256*sizeof(unsigned long long));
-        for (int i = 0; i < 256; i++)
-        {
-            mask_table[i] = ~0;
-            mask_table[i] = mask_table[i] >> (64 - pat_len);
-        }
-        build_mask_table<<<256, pat_len>>>(d_pat, pat_len, mask_table);
-        int shift_or_threads = 65 - pat_len;
-        shift_or<<<num_of_packets, shift_or_threads>>>(packets_cuda, packets_size_config, mask_table, pat_len);
+        // unsigned long long* mask_table;
+        // cudaMallocManaged(&mask_table, 256*sizeof(unsigned long long));
+        // for (int i = 0; i < 256; i++)
+        // {
+        //     mask_table[i] = ~0;
+        //     mask_table[i] = mask_table[i] >> (64 - pat_len);
+        // }
+        // build_mask_table<<<256, pat_len>>>(d_pat, pat_len, mask_table);
+        // int shift_or_threads = 65 - pat_len;
+        // shift_or<<<num_of_packets, shift_or_threads>>>(packets_cuda, packets_size_config, mask_table, pat_len, filtered_valid);
+        // shift_or_optimized<<<num_of_packets, NUM_OF_THREADS>>>(packets_cuda, packets_size_config, mask_table, pat_len, filtered_valid);
+        
         cudaDeviceSynchronize();
+        time_prefilter += std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - filter_start).count();
 
         int num_of_states = get_num_of_states(regex_file);
         int* persistent_sv = get_persistent_sv(regex_file);
@@ -272,6 +277,7 @@ int main(int argc, char *argv[])
         cudaFree(filtered_valid);
         cudaFree(persistent_sv_cuda);
         cudaFree(acc_states);
+        cudaFree(d_pat);
     }
 
     // printf("========================================\n");
@@ -296,6 +302,7 @@ int main(int argc, char *argv[])
     cudaFree(packets_cuda);
     cudaFree(packets_size_config);
 
+    std::cout << "Prefilter time consumption: " << time_prefilter << "ms" << std::endl;
     auto end = std::chrono::steady_clock::now();
     std::cout << "In mode " << mode << "GPU elapsed time in milliseconds" << "(num of threads: " << NUM_OF_THREADS << "): "
         << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()

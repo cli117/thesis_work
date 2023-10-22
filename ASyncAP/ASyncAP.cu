@@ -1,6 +1,6 @@
-__device__ void vector_copy_AP(int* src, int* dest, int size)
+__device__ void vector_copy_AP(int* src, int* dest, int size, int start_pos)
 {
-    for (int i = 0; i < size; i++)
+    for (int i = start_pos; i < start_pos + size; i++)
     {
         dest[i] = src[i];
     }
@@ -19,26 +19,29 @@ __device__ void print_vec_AP(int* vec, int size)
     }
 }
 
-__device__ void bit_vector_and_AP(int* a, int* b, int* output, int size)
+__device__ void bit_vector_and_AP(int* a, int* b, int* output, int size, int start_pos)
 {
-    for (int i = 0; i < size; i++) {
-        output[i] = a[i] & b[i];
+    for (int i = start_pos; i < start_pos + size; i++) {
+        output[i] = a[i] & 0;
     }
 }
 
 __global__ void ASyncAP(char** packets_cuda, int* packets_size_config, cuda_pair** nfa_cuda, int* state_transition_size_cfg, int num_of_states, int* persistent_sv, int* acc_states, int acc_length, char* regex_filename, bool* result, bool* filtered_valid)
 {
-    if (!filtered_valid[blockIdx.x])
-    {
-        return;
-    }
+    // if (!filtered_valid[blockIdx.x])
+    // {
+    //     return;
+    // }
     char* packet = packets_cuda[blockIdx.x];
     int n = packets_size_config[blockIdx.x];
     int stride = blockDim.x;
-    int c_vector[1000];
-    int f_vector[1000];
+    __shared__ int c_vector[4096];
+    __shared__ int f_vector[4096];
 
-    for (int i = 0; i < num_of_states; i++) 
+    int start_pos = threadIdx.x * 8;
+    int size = num_of_states/32 + 1;
+
+    for (int i = start_pos; i < start_pos + size; i++) 
     {
         c_vector[i] = 0;
         f_vector[i] = 0;
@@ -56,7 +59,7 @@ __global__ void ASyncAP(char** packets_cuda, int* packets_size_config, cuda_pair
 
         while (curr_pos < n)
         {
-            bit_vector_and_AP(c_vector, persistent_sv, f_vector, num_of_states);
+            bit_vector_and_AP(c_vector, persistent_sv, f_vector, size, start_pos);
             int num_of_transitions = state_transition_size_cfg[packet[curr_pos]];
             bool proceed = false;
             for (int i = 0; i < num_of_transitions; i += 1)
@@ -65,14 +68,15 @@ __global__ void ASyncAP(char** packets_cuda, int* packets_size_config, cuda_pair
                 int src = curr_transition.src - 1;
                 int dest = curr_transition.dest - 1;
                 
-                if (src == -1 || c_vector[src] == 1)
+                if (src == -1 || (c_vector[start_pos + (src / 32)] & (1 << (src % 32))))
                 {
-                    // printf("%c: %d - %d\n", packet[curr_pos], src, dest);
-                    f_vector[dest] = 1;
+                    // printf("%c: %d - %d in %s\n", packet[curr_pos], src, dest, regex_filename);
+                    f_vector[start_pos + (dest / 32)] |= 1 << (dest % 32);
                     proceed = true;
                     for (int i = threadIdx.x; i < acc_length; i += stride)
                     {
-                        if (f_vector[acc_states[i] - 1] == 1)
+                        int offset = (acc_states[i] - 1) / 32;
+                        if (f_vector[start_pos + offset] & (1 << ((acc_states[i] - 1) % 32)))
                         {
                             result[0] = true;
                             // printf("found at %s!\n", regex_filename);
@@ -84,7 +88,7 @@ __global__ void ASyncAP(char** packets_cuda, int* packets_size_config, cuda_pair
 
             if (!proceed)
             {
-                for (int i = 0; i < num_of_states; i++) 
+                for (int i = start_pos; i < start_pos + size; i++) 
                 {
                     c_vector[i] = 0;
                     f_vector[i] = 0;
@@ -92,14 +96,8 @@ __global__ void ASyncAP(char** packets_cuda, int* packets_size_config, cuda_pair
                 break;
             }
 
-            vector_copy_AP(f_vector, c_vector, num_of_states);
+            vector_copy_AP(f_vector, c_vector, size, start_pos);
             curr_pos += 1;
-
-            if (c_vector[num_of_states - 1] == 1) 
-            {
-                result[0] = true;
-                return;
-            }
         }
 
         curr_start_pos += stride;

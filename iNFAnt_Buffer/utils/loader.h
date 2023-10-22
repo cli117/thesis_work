@@ -102,7 +102,7 @@ int* get_persistent_sv(std::string filename)
         int src = std::stoi(line.substr(0, dash_idx));
         int dest = std::stoi(line.substr(dash_idx+1, cln_idx - dash_idx - 1));
         if (src == dest){
-            ret[src - 1] = 1;
+            ret[src - 1] = true;
         }
     }
 
