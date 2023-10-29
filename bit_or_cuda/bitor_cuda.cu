@@ -48,57 +48,57 @@ __global__ void shift_or(char** string_cuda, int* packets_size_config, unsigned 
 }
 
 
-// __global__ void shift_or_optimized(char** targets_cuda, int* targets_size_config, unsigned long long* mask_table, int pat_len, bool* filtered_valid)
-// {
-//     char* target = targets_cuda[blockIdx.x];
-//     int m = targets_size_config[blockIdx.x];
-//     int stride = blockDim.x;
-//     unsigned long long curr_mask[5];
-//     int mask_len = 3 * pat_len - 1;
+__global__ void shift_or_optimized(char** targets_cuda, int* targets_size_config, unsigned long long* mask_table, int pat_len, bool* filtered_valid)
+{
+    char* target = targets_cuda[blockIdx.x];
+    int m = targets_size_config[blockIdx.x];
+    int stride = blockDim.x;
+    unsigned long long curr_mask[5];
+    int mask_len = 3 * pat_len - 1;
     
     
 
-//     for (int index = threadIdx.x; index < m; index += stride)
-//     {
-//         // curr_mask[0] = 0;
-//         // curr_mask[1] = 0;
-//         // curr_mask[2] = 0;
-//         // curr_mask[3] = 0;
-//         // curr_mask[4] = 0;
+    for (int index = threadIdx.x; index < m; index += stride)
+    {
+        curr_mask[0] = 0;
+        curr_mask[1] = 0;
+        curr_mask[2] = 0;
+        curr_mask[3] = 0;
+        curr_mask[4] = 0;
 
-//         int i = pat_len * index;
-//         int j = pat_len * (index + 2)-1;
-//         if(i>m)
-//             return;
-//         if(j>m)
-//             j=m;
+        int i = pat_len * index;
+        int j = pat_len * (index + 2)-1;
+        if(i>m)
+            return;
+        if(j>m)
+            j=m;
 
-//         // while (i <= j)
-//         // {
-//         //     curr_mask[0] <<= 1;
-//         //     curr_mask[0] |= curr_mask[1] >> 63;
+        while (i <= j)
+        {
+            curr_mask[0] <<= 1;
+            curr_mask[0] |= curr_mask[1] >> 63;
 
-//         //     curr_mask[1] <<= 1;
-//         //     curr_mask[1] |= curr_mask[2] >> 63;
+            curr_mask[1] <<= 1;
+            curr_mask[1] |= curr_mask[2] >> 63;
 
-//         //     curr_mask[2] <<= 1;
-//         //     curr_mask[2] |= curr_mask[3] >> 63;
+            curr_mask[2] <<= 1;
+            curr_mask[2] |= curr_mask[3] >> 63;
 
-//         //     curr_mask[3] <<= 1;
-//         //     curr_mask[3] |= curr_mask[4] >> 63;
+            curr_mask[3] <<= 1;
+            curr_mask[3] |= curr_mask[4] >> 63;
 
-//         //     curr_mask[4] <<= 1;
-//         //     curr_mask[4] |= mask_table[target[j]];
+            curr_mask[4] <<= 1;
+            curr_mask[4] |= mask_table[target[j]];
 
-//         //     j -= 1;
-//         // }
+            j -= 1;
+        }
 
-//         // for (int k = 0; k < mask_len; k++)
-//         // {
-//         //     if (!(curr_mask[k/64] & (1ULL << (k%64))))
-//         //     {
-//         //         filtered_valid[threadIdx.x] = true;
-//         //     }
-//         // }
-//     }
-// }
+        for (int k = 0; k < mask_len; k++)
+        {
+            if (!(curr_mask[k/64] & (1ULL << (k%64))))
+            {
+                filtered_valid[threadIdx.x] = true;
+            }
+        }
+    }
+}

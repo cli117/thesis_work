@@ -4,6 +4,8 @@
 #include "../../bit_or_cuda/bitor_cuda.cu"
 #include <chrono>
 #include <filesystem>
+#include <iostream>
+#include <fstream>
 namespace fs = std::filesystem;
 
 __device__ void print_vec(int* vec, int size)
@@ -167,6 +169,8 @@ int main(int argc, char *argv[])
     auto start = std::chrono::steady_clock::now();
     int num_of_iterations = 0;
     float time_prefilter = 0.;
+    ofstream f;
+    f.open("/home/cli117/Documents/regex.log");
     for (const auto & entry : fs::directory_iterator(working_dir + "test_suite/nfa_compare"))
     // for (int i = 0; i < 1; i++)
     {
@@ -178,7 +182,8 @@ int main(int argc, char *argv[])
 
         std::string regex_file = entry.path().u8string();
         // std::string regex_file = working_dir + "test_suite/nfa_output/nfa65.nfa";
-        // std::cout << num_of_iterations << " th iteration: " << regex_file << std::endl;
+        f << num_of_iterations << " th iteration: " << regex_file << std::endl;
+        std::cout << num_of_iterations << " th iteration: " << regex_file << std::endl;
         std::string corpus_file = working_dir + string_filename;
 
         std::unordered_set<int> acc_set;
@@ -279,6 +284,8 @@ int main(int argc, char *argv[])
         cudaFree(acc_states);
         cudaFree(d_pat);
     }
+
+    f.close();
 
     // printf("========================================\n");
     // for (int i = 0; i < num_of_packets; i++)
