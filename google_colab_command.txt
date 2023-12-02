@@ -1,0 +1,11 @@
+!/usr/local/cuda/bin/ncu --config-file off --export "/content/T4_log" --force-overwrite /content/iNFAnt /content/ test_suite/midstr_7k.txt 10 ASyncAP 512
+
+
+!/content/gdrive/MyDrive/nsight-compute/2023.2.2/ncu --config-file off --export "/content/T4_log" --force-overwrite --set full /content/gdrive/MyDrive/thesis_work/iNFAnt_Buffer/engine/iNFAnt /content/gdrive/MyDrive/thesis_work/iNFAnt_Buffer/ test_suite/midstr_7k.txt 10 ASyncAP 512
+
+
+! set -x \
+&& cd $(mktemp -d) \
+&& wget https://developer.download.nvidia.com/compute/cuda/12.3.0/local_installers/cuda_12.3.0_545.23.06_linux.run \
+&& sudo sh cuda_12.3.0_545.23.06_linux.run --silent --toolkit \
+&& rm cuda_12.3.0_545.23.06_linux.run

@@ -22,11 +22,11 @@ __device__ void print_vec_AP(int* vec, int size)
 __device__ void bit_vector_and_AP(int* a, int* b, int* output, int size, int start_pos)
 {
     for (int i = start_pos; i < start_pos + size; i++) {
-        output[i] = a[i] & 0;
+        output[i] = a[i] & b[i];
     }
 }
 
-__global__ void ASyncAP(char** packets_cuda, int* packets_size_config, cuda_pair** nfa_cuda, int* state_transition_size_cfg, int num_of_states, int* persistent_sv, int* acc_states, int acc_length, char* regex_filename, bool* result, bool* filtered_valid)
+__global__ void ASyncAP(char** packets_cuda, int* packets_size_config, cuda_pair** nfa_cuda, int* state_transition_size_cfg, int num_of_states, int* persistent_sv, int* acc_states, int acc_length, char* regex_filename, bool* result, bool* filtered_valid, int start_state = -1)
 {
     // if (!filtered_valid[blockIdx.x])
     // {
@@ -68,7 +68,7 @@ __global__ void ASyncAP(char** packets_cuda, int* packets_size_config, cuda_pair
                 int src = curr_transition.src - 1;
                 int dest = curr_transition.dest - 1;
                 
-                if (src == -1 || (c_vector[start_pos + (src / 32)] & (1 << (src % 32))))
+                if (src == start_state || (c_vector[start_pos + (src / 32)] & (1 << (src % 32))))
                 {
                     // printf("%c: %d - %d in %s\n", packet[curr_pos], src, dest, regex_filename);
                     f_vector[start_pos + (dest / 32)] |= 1 << (dest % 32);
@@ -79,7 +79,7 @@ __global__ void ASyncAP(char** packets_cuda, int* packets_size_config, cuda_pair
                         if (f_vector[start_pos + offset] & (1 << ((acc_states[i] - 1) % 32)))
                         {
                             result[0] = true;
-                            // printf("found at %s!\n", regex_filename);
+                            printf("found at %s!\n", regex_filename);
                             return;
                         }
                     }

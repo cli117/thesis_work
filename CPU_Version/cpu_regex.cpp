@@ -129,14 +129,13 @@ void vector_copy(int* src, int* dest, int size)
 }
 
 int main() {
-    auto start = chrono::steady_clock::now();
     vector<string> packets = get_packets();
     vector<cuda_pair>* nfa = get_nfa();
     int num_of_states = get_num_of_states();
     int* persistent_sv = get_persistent_sv();
     int* ret_vec = (int*) calloc(packets.size(), sizeof(int));
 
-    
+    auto start = chrono::steady_clock::now();
     for (int i = 0; i < packets.size(); i++) {
         int* c_vec = (int*)calloc(num_of_states, sizeof(int));
         int* f_vec = (int*)calloc(num_of_states, sizeof(int));

@@ -22,9 +22,45 @@ void preKMP(const char* pattern, int f[])
         f[i] = k + 1;
     }
 }
- 
+
+__global__ void KMP_PATTERN(char* pattern, char** targets_cuda, int* targets_size_config, int f[],int n, bool* filtered_valid)
+{
+    char* target = targets_cuda[blockIdx.x];
+    int m = targets_size_config[blockIdx.x];
+    int stride = blockDim.x;
+    if (n == 0)
+    {
+        return;
+    }
+    for (int k = 0; k < stride; k += stride)
+    {
+        int i = 0;
+        int j = 0;
+        while (i < m)
+        {
+            if (target[i] == pattern[j])
+            {
+                i += 1;
+                j += 1;
+                if (j == n)
+                {
+                    return;
+                }
+            }
+            else if (j > 0)
+            {
+                j = f[j-1];
+            }
+            else
+            {
+                i += 1;
+            }
+        }
+    }
+}
+
 //check whether target string contains pattern 
-__global__ void KMP(char* pattern, char** targets_cuda, int* targets_size_config, int f[],int n, int length, bool* filtered_valid)
+__global__ void KMP(char* pattern, char** targets_cuda, int* targets_size_config, int f[],int n, bool* filtered_valid)
 {
     char* target = targets_cuda[blockIdx.x];
     int m = targets_size_config[blockIdx.x];
@@ -41,12 +77,7 @@ __global__ void KMP(char* pattern, char** targets_cuda, int* targets_size_config
         int k = 0;        
         while (i < j)
         {
-            if (k == -1)
-            {
-                i++;
-                k = 0;
-            }
-            else if (target[i] == pattern[k])
+            if (target[i] == pattern[k])
             {
                 i++;
                 k++;
@@ -57,8 +88,15 @@ __global__ void KMP(char* pattern, char** targets_cuda, int* targets_size_config
                     return;
                 }
             }
+            else if (k > 0)
+            {
+                k = f[k-1];
+            }
             else
-                k = f[k];
+            {
+                i += 1;
+            }
+                
         }
     }
     

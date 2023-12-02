@@ -23,19 +23,19 @@ void vector_copy(int* src, int* dest, int size)
 }
 
 int main(int argc, char *argv[]) {
-    std::string string_filename = "strings";
+    std::string string_filename = "/home/cli117/thesis_work/iNFAnt_Buffer/test_suite/nfa_output/L/nfa0.nfa";
     if (argc > 1) {
         string_filename = argv[1];
     }
     auto start = chrono::steady_clock::now();
-    vector<string> packets = get_packets(string_filename);
+    vector<string> packets = get_packets("/home/cli117/thesis_work/iNFAnt_Buffer/test_suite/midstr_7k.txt");
     std::unordered_set<int> acc_set;
-    std::vector<cuda_pair>* nfa = get_nfa("../test_suite/nfa_output/nfa0.nfa", &acc_set);
-    int num_of_states = get_num_of_states();
-    int* persistent_sv = get_persistent_sv();
+    std::vector<cuda_pair>* nfa = get_nfa(string_filename, &acc_set);
+    int num_of_states = get_num_of_states(string_filename);
+    int* persistent_sv = get_persistent_sv(string_filename);
     int* ret_vec = (int*) calloc(packets.size(), sizeof(int));
 
-    
+    std::cout << "packets size: " << packets.size() << std::endl;
     for (int i = 0; i < packets.size(); i++) {
         int* c_vec = (int*)calloc(num_of_states, sizeof(int));
         int* f_vec = (int*)calloc(num_of_states, sizeof(int));

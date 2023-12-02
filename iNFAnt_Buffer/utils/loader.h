@@ -191,3 +191,19 @@ void print_nfa(cuda_pair** nfa_cuda, int* size_cfg)
         }
     }
 }
+
+std::string get_all_packets(std::string filename)
+{
+    std::string ret = "";
+    std::ifstream infile(filename);
+    std::string line;
+    while (std::getline(infile, line))
+    {
+        if (line.length() > 0) 
+        {
+            ret.append(line);
+        }
+    }
+
+    return ret;
+}
