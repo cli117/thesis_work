@@ -289,8 +289,9 @@ int main(int argc, char *argv[])
             for (int i = 0; i < num_of_states; i++)
             {
                 persistent_sv_cuda[i / 32] |= 1 << (i % 32);
+                // persistent_sv_cuda[i] = persistent_sv[i];
             }
-            ASyncAP<<<num_of_packets, NUM_OF_THREADS>>>(packets_cuda, packets_size_config, nfa_cuda, state_transition_size_cfg, num_of_states, persistent_sv_cuda, acc_states, acc_set.size(), regex_file_cuda, result, filtered_valid, -1);
+            ASyncAP<<<num_of_packets, NUM_OF_THREADS>>>(packets_cuda, packets_size_config, nfa_cuda, state_transition_size_cfg, num_of_states, persistent_sv_cuda, acc_states, acc_set.size(), regex_file_cuda, result, filtered_valid);
         }
         cudaDeviceSynchronize();
 

@@ -73,7 +73,7 @@ __global__ void ASyncAP(char** packets_cuda, int* packets_size_config, cuda_pair
                     // printf("%c: %d - %d in %s\n", packet[curr_pos], src, dest, regex_filename);
                     f_vector[start_pos + (dest / 32)] |= 1 << (dest % 32);
                     proceed = true;
-                    for (int i = threadIdx.x; i < acc_length; i += stride)
+                    for (int i = 0; i < acc_length; i += 1)
                     {
                         int offset = (acc_states[i] - 1) / 32;
                         if (f_vector[start_pos + offset] & (1 << ((acc_states[i] - 1) % 32)))
