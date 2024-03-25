@@ -9,6 +9,8 @@ __global__ void literal_match(char* pattern, char** targets_cuda, int* targets_s
 
     for (; curr_start_pos <= m - pat_len; curr_start_pos += stride)
     {
+        filtered_valid[blockIdx.x] = false;
+        ptr = 0;
         while (ptr < pat_len && target[curr_start_pos + ptr] == pattern[ptr])
         {
             ptr += 1;

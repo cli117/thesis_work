@@ -26,7 +26,7 @@ __device__ void bit_vector_and_AP(int* a, int* b, int* output, int size, int sta
     }
 }
 
-__global__ void ASyncAP(char** packets_cuda, int* packets_size_config, cuda_pair** nfa_cuda, int* state_transition_size_cfg, int num_of_states, int* persistent_sv, int* acc_states, int acc_length, char* regex_filename, bool* result, bool* filtered_valid, int start_state = -1)
+__global__ void ASyncAP(char** packets_cuda, int* packets_size_config, cuda_pair** nfa_cuda, int* state_transition_size_cfg, int num_of_states, int* persistent_sv, int* acc_states, int acc_length, char* regex_filename, bool* result, bool* filtered_valid, int* hit_num, int start_state = -1)
 {
     // if (!filtered_valid[blockIdx.x])
     // {
@@ -50,7 +50,7 @@ __global__ void ASyncAP(char** packets_cuda, int* packets_size_config, cuda_pair
     int curr_start_pos = threadIdx.x;
     while (curr_start_pos < n)
     {
-        if (result[0])
+        if (result[blockIdx.x])
         {
             return;
         }
@@ -78,8 +78,9 @@ __global__ void ASyncAP(char** packets_cuda, int* packets_size_config, cuda_pair
                         int offset = (acc_states[i] - 1) / 32;
                         if (f_vector[start_pos + offset] & (1 << ((acc_states[i] - 1) % 32)))
                         {
-                            result[0] = true;
-                            printf("found at %s!\n", regex_filename);
+                            result[blockIdx.x] = true;
+                            // printf("found at %s!\n", regex_filename);
+                            atomicAdd(&hit_num[0], 1);
                             return;
                         }
                     }

@@ -41,10 +41,12 @@ __device__ void bit_vector_and(int* a, int* b, int* output, int size)
 
 __global__ void iNFAnt_match(char** packets_cuda, int* packets_size_config, cuda_pair** nfa_cuda, int* state_transition_size_cfg, int num_of_states, int* persistent_sv, bool* filtered_valid, int* acc_states, int acc_length, const char* regex_filename, bool* result)
 {
-    // if (!filtered_valid[blockIdx.x])
-    // {
-    //     return;
-    // }
+    if (!filtered_valid[blockIdx.x])
+    {
+        return;
+    }
+    
+    // printf("%d\n", filtered_valid[blockIdx.x]);
     __shared__ int curr_pos;
     extern __shared__ int vector[];
     int* c_vector = &vector[0];
@@ -218,16 +220,16 @@ int main(int argc, char *argv[])
         cudaMallocManaged(&filtered_valid, num_of_packets * sizeof(bool));
 
 
-        // int *f;
-        // f = new int[pat_len];
-        // preKMP(pat.c_str(), f);
-        // int *d_f;
-        // cudaMalloc((void **)&d_f, pat_len*cSize);
-        // cudaMemcpy(d_f, f, pat_len*cSize, cudaMemcpyHostToDevice);
+        int *f;
+        f = new int[pat_len];
+        preKMP(pat.c_str(), f);
+        int *d_f;
+        cudaMalloc((void **)&d_f, pat_len*cSize);
+        cudaMemcpy(d_f, f, pat_len*cSize, cudaMemcpyHostToDevice);
 
         // KMP<<<num_of_packets, 512>>>(d_pat, packets_cuda, packets_size_config, d_f, pat_len, filtered_valid);
         // cudaDeviceSynchronize();
-        // KMP_PATTERN<<<num_of_packets, NUM_OF_THREADS>>>(d_pat, packets_cuda, packets_size_config, d_f, pat_len, filtered_valid);
+        // // KMP_PATTERN<<<num_of_packets, NUM_OF_THREADS>>>(d_pat, packets_cuda, packets_size_config, d_f, pat_len, filtered_valid);
         // literal_match<<<num_of_packets, NUM_OF_THREADS>>>(d_pat, packets_cuda, packets_size_config, pat_len, num_of_packets, filtered_valid);
 
         // unsigned long long* mask_table;
@@ -243,11 +245,11 @@ int main(int argc, char *argv[])
         // shift_or_optimized<<<num_of_packets, NUM_OF_THREADS>>>(packets_cuda, packets_size_config, mask_table, pat_len, filtered_valid);
         
         cudaDeviceSynchronize();
-        time_prefilter += std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - filter_start).count();
+        // time_prefilter += std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - filter_start).count();
 
-        auto cpu_filter_start = std::chrono::steady_clock::now();
-        kmp_search(all_packets_in_one, pat);
-        cpu_prefilter += std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - cpu_filter_start).count();
+        // auto cpu_filter_start = std::chrono::steady_clock::now();
+        // kmp_search(all_packets_in_one, pat);
+        // cpu_prefilter += std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - cpu_filter_start).count();
 
         int num_of_states = get_num_of_states(regex_file);
         int* persistent_sv = get_persistent_sv(regex_file);
@@ -272,8 +274,15 @@ int main(int argc, char *argv[])
         cudaMallocManaged(&regex_file_cuda, sizeof(char) * regex_file.size());
         strcpy(regex_file_cuda, regex_file.c_str());
         bool* result;
-        cudaMallocManaged(&result, sizeof(bool));
-        result[0] = false;
+        cudaMallocManaged(&result, num_of_packets * sizeof(bool));
+        for (int i = 0; i < num_of_packets; i++)
+        {
+            result[i] = false;
+        }
+        
+        int* hit_num;
+        cudaMallocManaged(&hit_num, sizeof(int));
+        hit_num[0] = 0;
 
         auto iteration_start = std::chrono::steady_clock::now();
         if (mode == "iNFAnt")
@@ -291,12 +300,12 @@ int main(int argc, char *argv[])
                 persistent_sv_cuda[i / 32] |= 1 << (i % 32);
                 // persistent_sv_cuda[i] = persistent_sv[i];
             }
-            ASyncAP<<<num_of_packets, NUM_OF_THREADS>>>(packets_cuda, packets_size_config, nfa_cuda, state_transition_size_cfg, num_of_states, persistent_sv_cuda, acc_states, acc_set.size(), regex_file_cuda, result, filtered_valid);
+            ASyncAP<<<num_of_packets, NUM_OF_THREADS>>>(packets_cuda, packets_size_config, nfa_cuda, state_transition_size_cfg, num_of_states, persistent_sv_cuda, acc_states, acc_set.size(), regex_file_cuda, result, filtered_valid, hit_num);
         }
         cudaDeviceSynchronize();
 
         std::cout << "Time consumption: " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - iteration_start).count() << "ms" << std::endl;
-
+        std::cout << "Hit num: " << hit_num[0] << ", hit rate: " << 1. * hit_num[0] / num_of_packets << std::endl;
         for (int i = 0; i < 256; i++)
         {
             cudaFree(nfa_cuda[i]);

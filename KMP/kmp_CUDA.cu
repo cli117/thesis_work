@@ -84,13 +84,14 @@ __global__ void KMP(char* pattern, char** targets_cuda, int* targets_size_config
                 if (k == n)
                 {
                     i = i - k + 1;
-                    filtered_valid[blockIdx.x] = true;
+                    filtered_valid[blockIdx.x] = false;
                     return;
                 }
             }
             else if (k > 0)
             {
-                k = f[k-1];
+                // k = f[k-1];
+                i += 1;
             }
             else
             {

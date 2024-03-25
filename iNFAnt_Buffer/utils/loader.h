@@ -128,8 +128,8 @@ std::vector<std::string> get_packets(std::string filename)
     std::ifstream infile(filename);
     std::string line;
     std::string buffer;
-    int MIN_LENGTH = 10000;
-    int MAX_LENGTH = 20000;
+    int MIN_LENGTH = 100000;
+    int MAX_LENGTH = 200000;
     while (std::getline(infile, line))
     {
         if (line.length() > 0) {
